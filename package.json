@@ -1,0 +1,43 @@
+{
+  "name": "@sandsoftwaresolutions/csv-safe",
+  "version": "0.1.0",
+  "description": "Read and write CSV safely: quotes, Dutch Excel, and protection against formula injection in exports.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "csv",
+    "excel",
+    "security",
+    "parser"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SandSoftwareSolutions/ss-csv-safe.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SandSoftwareSolutions/ss-csv-safe/issues"
+  },
+  "homepage": "https://github.com/SandSoftwareSolutions/ss-csv-safe#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
