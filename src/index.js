@@ -85,11 +85,14 @@ function cell(value, sep, safe) {
   if (value === null || value === undefined) return "";
   let text;
   if (value instanceof Date) text = Number.isNaN(value.getTime()) ? "" : value.toISOString();
-  else if (typeof value === "object") text = JSON.stringify(value);
+  else if (typeof value === "object") text = JSON.stringify(value) ?? ""; // toJSON() may return undefined
   else text = String(value);
   if (safe && typeof value === "string") text = neutralize(text);
   return text.includes(sep) || /["\r\n]/.test(text) || /^\s|\s$/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
+
+// A row with one empty cell must be written as "" : an empty line is a blank line to every CSV reader and would vanish.
+const line = (cells, sep) => (cells.length === 1 && cells[0] === "" ? '""' : cells.join(sep));
 
 /**
  * Writes CSV from an array of objects or of arrays. Safe by default against formula injection (see `neutralize`;
@@ -104,13 +107,13 @@ export function stringifyCsv(rows, { columns, header, delimiter, eol = "\r\n", b
   const objects = rows.length > 0 && rows.every((r) => r !== null && typeof r === "object" && !Array.isArray(r));
   if (objects) {
     const names = columns ?? [...new Set(rows.flatMap((r) => Object.keys(r)))];
-    if (header ?? true) lines.push(names.map((n) => cell(n, sep, safe)).join(sep));
-    for (const r of rows) lines.push(names.map((n) => cell(r[n], sep, safe)).join(sep));
+    if (header ?? true) lines.push(line(names.map((n) => cell(n, sep, safe)), sep));
+    for (const r of rows) lines.push(line(names.map((n) => cell(r[n], sep, safe)), sep));
   } else {
-    if (columns && (header ?? true)) lines.push(columns.map((n) => cell(n, sep, safe)).join(sep));
+    if (columns && (header ?? true)) lines.push(line(columns.map((n) => cell(n, sep, safe)), sep));
     for (const r of rows) {
       if (!Array.isArray(r)) throw new TypeError("stringifyCsv: rows must be all objects or all arrays");
-      lines.push(r.map((v) => cell(v, sep, safe)).join(sep));
+      lines.push(line(r.map((v) => cell(v, sep, safe)), sep));
     }
   }
   const body = lines.length > 0 ? lines.join(eol) + eol : "";

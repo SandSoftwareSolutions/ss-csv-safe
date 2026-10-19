@@ -47,3 +47,6 @@ Handles quotes, doubled quotes, line breaks inside quotes, CRLF and LF, and a le
 
 - Reading is not "safe" or "unsafe": the danger is in what you write for someone else to open. If you re-export data that came from users, keep `safe` on.
 - The apostrophe shows in the cell as text in some programs. That is the price of not running attacker-controlled formulas.
+- A row whose only cell is empty is written as `""`, because an empty line is a blank line to every reader and would disappear.
+- With `header: true`, a row shorter than the header is filled with `""`, cells beyond the header are dropped, and a repeated column name keeps the last value. Use the array form if you need every cell.
+- The delimiter guess looks at the first line only; pass `delimiter` when your header might contain tabs, semicolons or pipes inside names.

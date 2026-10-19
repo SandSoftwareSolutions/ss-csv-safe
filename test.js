@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { test } from "node:test";
 
 import { detectDelimiter, neutralize, parseCsv, stringifyCsv } from "./src/index.js";
@@ -62,4 +63,42 @@ test("what is written can be read back", () => {
   const rows = [{ naam: "Kaj", opm: 'a "b", c\nd', n: "1" }, { naam: "Een;ander", opm: "", n: "2" }];
   assert.deepEqual(parseCsv(stringifyCsv(rows), { header: true }), rows);
   assert.deepEqual(parseCsv(stringifyCsv(rows, { excel: true }), { header: true }), rows);
+});
+
+test("every formula prefix is neutralized: = + - @ tab and carriage return (also in the header and when quoting is needed)", () => {
+  for (const prefix of ["=", "+", "-", "@", "\t", "\r"]) {
+    assert.equal(neutralize(`${prefix}cmd`), `'${prefix}cmd`, JSON.stringify(prefix));
+    const csv = stringifyCsv([{ [`${prefix}head`]: `${prefix}1+1` }]);
+    const [[head], [value]] = parseCsv(csv, { delimiter: "," });
+    assert.equal(head, `'${prefix}head`);
+    assert.equal(value, `'${prefix}1+1`);
+  }
+  assert.equal(neutralize("a=1"), "a=1");
+  assert.equal(neutralize(-5), -5);
+});
+
+test("a row with one empty cell is written as \"\" so it does not vanish as a blank line", () => {
+  assert.equal(stringifyCsv([[""]]), '""\r\n');
+  assert.deepEqual(parseCsv(stringifyCsv([["a"], [""], ["b"]])), [["a"], [""], ["b"]]);
+  assert.deepEqual(parseCsv(stringifyCsv([{ a: "x" }, { a: "" }]), { header: true }), [{ a: "x" }, { a: "" }]);
+});
+
+test("a toJSON that returns undefined gives an empty cell instead of a TypeError", () => {
+  assert.equal(stringifyCsv([[{ toJSON() { return undefined; } }, "x"]]), ",x\r\n");
+});
+
+test("random tables: write then read gives the same table (every delimiter, LF and CRLF); safe mode gives neutralize() of each cell", () => {
+  const pool = ["", "a", "b c", " ,", ";", "\t", "|", '"', '""', "\n", "\r", "\r\n", "=", "+", "-", "@", "=1+1", "é", "😀", "x\ny", "'", "  ", "a,b", " "];
+  const pick = (n) => randomBytes(1)[0] % n;
+  const field = () => Array.from({ length: pick(4) }, () => pool[pick(pool.length)]).join("");
+  for (let i = 0; i < 400; i++) {
+    const columns = 1 + pick(4);
+    const rows = Array.from({ length: 1 + pick(5) }, () => Array.from({ length: columns }, field));
+    for (const delimiter of [",", ";", "\t", "|"]) {
+      for (const eol of ["\r\n", "\n"]) {
+        assert.deepEqual(parseCsv(stringifyCsv(rows, { safe: false, delimiter, eol }), { delimiter }), rows);
+        assert.deepEqual(parseCsv(stringifyCsv(rows, { delimiter, eol }), { delimiter }), rows.map((r) => r.map(neutralize)));
+      }
+    }
+  }
 });
