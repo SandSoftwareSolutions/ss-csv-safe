@@ -10,6 +10,8 @@ Read and write CSV without surprises, and without the classic security hole: a c
 npm install @sandsoftwaresolutions/csv-safe
 ```
 
+Works with `import` and `require()`, and ships TypeScript types for both.
+
 ## Write
 
 ```js
