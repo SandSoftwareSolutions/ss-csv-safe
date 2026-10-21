@@ -2,8 +2,8 @@ export type Cell = string | number | boolean | bigint | Date | null | undefined 
 
 export function detectDelimiter(text: string): "," | ";" | "\t" | "|";
 
-export function parseCsv(text: string, options: { delimiter?: string; header: true }): Record<string, string>[];
-export function parseCsv(text: string, options?: { delimiter?: string; header?: false }): string[][];
+export function parseCsv(text: string, options: { delimiter?: string; header: true; strict?: boolean; trim?: boolean }): Record<string, string>[];
+export function parseCsv(text: string, options?: { delimiter?: string; header?: false; strict?: boolean; trim?: boolean }): string[][];
 
 export function neutralize<T>(value: T): T | string;
 

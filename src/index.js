@@ -22,8 +22,11 @@ export function detectDelimiter(text) {
  * Parses CSV (RFC 4180): quotes, doubled quotes, newlines inside quotes, CRLF or LF, a leading byte order mark.
  * Returns an array of rows (arrays of strings), or with `header: true` an array of objects keyed by the first row.
  * The delimiter is detected unless you pass one. A quote that is never closed is an error, not silently swallowed.
+ * With `strict: true` the other malformed quoting is an error too: a quote in the middle of an unquoted field, and text
+ * after the closing quote of a quoted field. Use it for files that users upload, so a broken file is refused, not guessed at.
+ * With `trim: true` spaces and tabs around a field are dropped (also around its quotes; text inside quotes is kept as is).
  */
-export function parseCsv(text, { delimiter, header = false } = {}) {
+export function parseCsv(text, { delimiter, header = false, strict = false, trim = false } = {}) {
   if (typeof text !== "string") throw new TypeError("parseCsv: text must be a string");
   const source = text.replace(/^﻿/, "");
   const sep = delimiter ?? detectDelimiter(source);
@@ -34,8 +37,9 @@ export function parseCsv(text, { delimiter, header = false } = {}) {
   let quoted = false;
   let wasQuoted = false;
   let wasQuotedRow = false;
+  const blank = trim ? /^[ \t]*$/ : /^$/;
   const endField = () => {
-    row.push(field);
+    row.push(trim && !wasQuoted ? field.replace(/^[ \t]+|[ \t]+$/g, "") : field);
     field = "";
     wasQuoted = false;
   };
@@ -54,7 +58,8 @@ export function parseCsv(text, { delimiter, header = false } = {}) {
           i++;
         } else quoted = false;
       } else field += ch;
-    } else if (ch === '"' && field === "" && !wasQuoted) {
+    } else if (ch === '"' && blank.test(field) && !wasQuoted) {
+      field = "";
       quoted = true;
       wasQuoted = true;
       wasQuotedRow = true;
@@ -62,7 +67,14 @@ export function parseCsv(text, { delimiter, header = false } = {}) {
     else if (ch === "\r" || ch === "\n") {
       if (ch === "\r" && source[i + 1] === "\n") i++;
       endRow();
-    } else field += ch;
+    } else if (wasQuoted) {
+      if (trim && (ch === " " || ch === "\t")) continue;
+      if (strict) throw new Error(`parseCsv: unexpected ${JSON.stringify(ch)} after the closing quote of a field`);
+      field += ch;
+    } else {
+      if (strict && ch === '"') throw new Error("parseCsv: a quote in the middle of an unquoted field");
+      field += ch;
+    }
   }
   if (quoted) throw new Error("parseCsv: a quoted field is never closed");
   if (field !== "" || row.length > 0 || wasQuoted) endRow();

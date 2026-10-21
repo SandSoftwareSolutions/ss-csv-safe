@@ -102,3 +102,20 @@ test("random tables: write then read gives the same table (every delimiter, LF a
     }
   }
 });
+
+test("strict: a quote inside an unquoted field and text after a closing quote are errors; well-formed input is unchanged", () => {
+  for (const bad of ['a,b"c\n', 'a,"b"c\n', '"a"b,c\n', 'a,b "c"\n']) {
+    assert.throws(() => parseCsv(bad, { delimiter: ",", strict: true }), /quote|closing/, JSON.stringify(bad));
+    assert.doesNotThrow(() => parseCsv(bad, { delimiter: "," }), JSON.stringify(bad));
+  }
+  for (const good of ['a,"b"\n', '"a","b"', 'a,"b""c"\r\n', '"x\ny",z\n', 'a,\n"",""\n', '']) {
+    assert.deepEqual(parseCsv(good, { delimiter: ",", strict: true }), parseCsv(good, { delimiter: "," }), JSON.stringify(good));
+  }
+  assert.throws(() => parseCsv('a,"b', { strict: true }), /never closed/);
+});
+
+test("trim: spaces and tabs around fields and around quotes are dropped, text inside quotes is kept", () => {
+  assert.deepEqual(parseCsv(' a , "  b  " ,\t"c"\t\n', { delimiter: ",", trim: true }), [["a", "  b  ", "c"]]);
+  assert.deepEqual(parseCsv(' a , b ', { delimiter: "," }), [[" a ", " b "]]);
+  assert.throws(() => parseCsv('"a" x,b', { delimiter: ",", trim: true, strict: true }), /after the closing quote/);
+});

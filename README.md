@@ -37,6 +37,8 @@ import { parseCsv } from "@sandsoftwaresolutions/csv-safe";
 
 parseCsv(text);                    // [["naam","stad"],["Kaj","Haarlem"]]
 parseCsv(text, { header: true });  // [{ naam: "Kaj", stad: "Haarlem" }]
+parseCsv(text, { strict: true });  // throws on a stray quote or text after a closing quote (use for uploads)
+parseCsv(text, { trim: true });    // drops spaces and tabs around fields, also around quotes
 ```
 
 Handles quotes, doubled quotes, line breaks inside quotes, CRLF and LF, and a leading byte order mark. The delimiter (`,` `;` tab `|`) is detected from the first line unless you pass `delimiter`. An unclosed quote throws an error instead of silently eating the rest of the file. Values stay strings: converting them is your call.
